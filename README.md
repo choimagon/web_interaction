@@ -4,6 +4,8 @@
 
 React + Tailwind CSS + Motion을 사용하며, `index.html`이 Vite의 진입점입니다. 연기는 WebGL 유체 시뮬레이션으로 구현했고, 지원하지 않는 환경에서는 Canvas 2D 효과로 전환합니다.
 
+Tizen 등 내장 브라우저의 호환성을 위해 Tailwind CSS 3.4와 Chromium 63을 기준으로 빌드합니다. 캔버스 표시 영역은 전체 화면으로 유지하며, Pointer Events가 없으면 기존 마우스·터치 이벤트를 사용합니다. 실제 기기와 펌웨어별 동작은 해당 기기에서 확인해야 합니다.
+
 ## 로컬 실행
 
 Node.js 22.12 이상에서 실행하세요.

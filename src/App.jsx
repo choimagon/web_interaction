@@ -134,13 +134,13 @@ export default function App() {
         <div ref={cursorRef} className="canvas-cursor pointer-events-none fixed z-40" aria-hidden="true"><span /></div>
 
         <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={reveal} className="site-header pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between">
-          <a href="#" onClick={(event) => { event.preventDefault(); reset(); }} className="brand pointer-events-auto inline-flex items-center gap-2.5" aria-label="prism, 캔버스 초기화">
+          <a href="#" onClick={(event) => { event.preventDefault(); reset(); }} className="brand pointer-events-auto inline-flex items-center space-x-2.5" aria-label="prism, 캔버스 초기화">
             <PrismMark />
             <span>prism<span className="brand-period">.</span></span>
           </a>
-          <div className="header-center flex items-center gap-2.5 text-[10px] tracking-[0.22em] text-white/40"><span className="tiny-cross">+</span> A LITTLE DIGITAL DAYDREAM <span className="tiny-cross">+</span></div>
-          <div className="pointer-events-auto flex items-center gap-5">
-            <div className="live-badge flex items-center gap-2 text-[10px] tracking-[0.14em]"><span className="live-dot" />LIVE CANVAS</div>
+          <div className="header-center flex items-center space-x-2.5 text-[10px] tracking-[0.22em] text-white/40"><span className="tiny-cross">+</span> A LITTLE DIGITAL DAYDREAM <span className="tiny-cross">+</span></div>
+          <div className="pointer-events-auto flex items-center space-x-5">
+            <div className="live-badge flex items-center space-x-2 text-[10px] tracking-[0.14em]"><span className="live-dot" />LIVE CANVAS</div>
             <span className="header-divider h-4 w-px bg-white/10" />
             <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }} onClick={toggleFullscreen} className="icon-button" aria-label={fullscreen ? '전체 화면 닫기' : '전체 화면으로 보기'} title={fullscreen ? '전체 화면 닫기' : '전체 화면으로 보기'}><Icon name={fullscreen ? 'collapse' : 'expand'} size={17} /></motion.button>
           </div>
@@ -148,23 +148,23 @@ export default function App() {
 
         <section className="hero pointer-events-none absolute z-[2]" aria-labelledby="hero-title">
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: drawing ? 0.16 : 1, y: 0 }} transition={{ ...reveal, delay: 0.1 }}>
-            <div className="eyebrow mb-7 flex items-center gap-3 text-[10px] tracking-[0.21em] text-white/50"><span className="eyebrow-line" />LET YOUR CURIOSITY FLOW</div>
+            <div className="eyebrow mb-7 flex items-center space-x-3 text-[10px] tracking-[0.21em] text-white/50"><span className="eyebrow-line" />LET YOUR CURIOSITY FLOW</div>
             <h1 id="hero-title" className="hero-title"><span className="block">Let it</span><span className="flow-word block">flow<span className="title-dot">.</span></span></h1>
             <p className="hero-description mt-8 text-[13px] leading-[1.95] text-[#92919e]">마우스를 움직이거나, 가볍게 터치해 보세요.<br />손끝에서 피어나는, 당신만의 색.</p>
-            <button onClick={previewSmoke} className="explore-hint pointer-events-auto mt-9 inline-flex items-center gap-3" aria-label="연기 효과 미리 보기"><span className="mouse-icon"><Icon name="mouse" size={17} /></span><span>MOVE TO EXPLORE</span><Icon name="arrow" size={13} /></button>
+            <button onClick={previewSmoke} className="explore-hint pointer-events-auto mt-9 inline-flex items-center space-x-3" aria-label="연기 효과 미리 보기"><span className="mouse-icon"><Icon name="mouse" size={17} /></span><span>MOVE TO EXPLORE</span><Icon name="arrow" size={13} /></button>
           </motion.div>
         </section>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: drawing ? 0.1 : 1 }} transition={{ ...reveal, delay: 0.5 }} className="art-annotation pointer-events-none absolute flex items-center gap-3" aria-hidden="true">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: drawing ? 0.1 : 1 }} transition={{ ...reveal, delay: 0.5 }} className="art-annotation pointer-events-none absolute flex items-center space-x-3" aria-hidden="true">
           <span className="annotation-line" /><div><span className="block text-[9px] tracking-[0.24em] text-white/30">EXPERIMENT 001</span><span className="mt-1 block text-[11px] tracking-[0.04em] text-white/55">A touch of the unexpected.</span></div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...reveal, delay: 0.35 }} className="control-area absolute z-10">
-          <div className="control-caption mb-3 flex items-center justify-center gap-2 text-[10px] tracking-[0.035em] text-white/35"><Icon name="sparkle" size={12} /><AnimatePresence mode="wait" initial={false}><motion.span key={palette} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -3 }} transition={{ duration: 0.15 }}>{palette === 'rainbow' ? '색이 피어나고, 자유롭게 흐르는 순간' : `${selectedPalette.label} 빛으로 물드는 순간`}</motion.span></AnimatePresence></div>
+        <motion.div style={{ x: '-50%' }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ ...reveal, delay: 0.35 }} className="control-area absolute z-10">
+          <div className="control-caption mb-3 flex items-center justify-center space-x-2 text-[10px] tracking-[0.035em] text-white/35"><Icon name="sparkle" size={12} /><AnimatePresence mode="wait" initial={false}><motion.span key={palette} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -3 }} transition={{ duration: 0.15 }}>{palette === 'rainbow' ? '색이 피어나고, 자유롭게 흐르는 순간' : `${selectedPalette.label} 빛으로 물드는 순간`}</motion.span></AnimatePresence></div>
           <div className="toolbar flex items-center" role="group" aria-label="연기 설정">
-            <div className="palette-group flex items-center gap-3">
+            <div className="palette-group flex items-center space-x-3">
               <span className="control-label">COLOR</span>
-              <div className="flex items-center gap-2" role="group" aria-label="색상 팔레트">
+              <div className="flex items-center space-x-2" role="group" aria-label="색상 팔레트">
                 {palettes.map((item) => (
                   <motion.button key={item.id} whileHover={{ scale: 1.14 }} whileTap={{ scale: 0.91 }} onClick={() => setPalette(item.id)} className={`swatch relative shrink-0 rounded-full ${palette === item.id ? 'is-selected' : ''}`} style={{ '--swatch': item.color }} aria-label={item.label} aria-pressed={palette === item.id} title={item.label}>
                     <span className="swatch-color block rounded-full" style={{ background: item.color }} />
@@ -174,18 +174,18 @@ export default function App() {
               </div>
             </div>
             <span className="toolbar-divider" />
-            <label className="size-group flex items-center gap-3"><span className="control-label">SIZE</span><input aria-label="연기 크기" type="range" min="20" max="100" value={size} onChange={(event) => setSize(Number(event.target.value))} style={{ '--range-progress': `${(size - 20) / 80 * 100}%` }} /></label>
+            <label className="size-group flex items-center space-x-3"><span className="control-label">SIZE</span><input aria-label="연기 크기" type="range" min="20" max="100" value={size} onChange={(event) => setSize(Number(event.target.value))} style={{ '--range-progress': `${(size - 20) / 80 * 100}%` }} /></label>
             <span className="toolbar-divider" />
-            <motion.button whileTap={{ scale: 0.94 }} className={`auto-button flex items-center justify-center gap-2 ${auto ? 'is-active' : ''}`} onClick={() => setAuto((value) => !value)} aria-label={auto ? '자동 연기 끄기' : '자동 연기 켜기'} aria-pressed={auto} title={auto ? '자동 연기 끄기' : '자동 연기 켜기'}><Icon name={auto ? 'pause' : 'play'} size={15} /><span>자동 재생</span></motion.button>
+            <motion.button whileTap={{ scale: 0.94 }} className={`auto-button flex items-center justify-center space-x-2 ${auto ? 'is-active' : ''}`} onClick={() => setAuto((value) => !value)} aria-label={auto ? '자동 연기 끄기' : '자동 연기 켜기'} aria-pressed={auto} title={auto ? '자동 연기 끄기' : '자동 연기 켜기'}><Icon name={auto ? 'pause' : 'play'} size={15} /><span>자동 재생</span></motion.button>
             <span className="toolbar-divider last-divider" />
             <motion.button whileHover={{ rotate: -35 }} whileTap={{ scale: 0.88 }} className="reset-button icon-button" onClick={reset} aria-label="캔버스 초기화" title="캔버스 초기화"><Icon name="reset" size={17} /></motion.button>
           </div>
         </motion.div>
 
         <footer className="site-footer pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5"><span className="footer-dot" /><span className="footer-copy">NO RULES. JUST FLOW.</span></div>
+          <div className="flex items-center space-x-2.5"><span className="footer-dot" /><span className="footer-copy">NO RULES. JUST FLOW.</span></div>
           <span className="footer-middle">조금의 움직임, 무한한 색.</span>
-          <button className="help-button pointer-events-auto flex items-center gap-2" onClick={() => setHelp(true)} aria-label="사용 방법 보기"><span>HOW TO PLAY</span><Icon name="help" size={15} /></button>
+          <button className="help-button pointer-events-auto flex items-center space-x-2" onClick={() => setHelp(true)} aria-label="사용 방법 보기"><span>HOW TO PLAY</span><Icon name="help" size={15} /></button>
         </footer>
 
         <div className="toast-container pointer-events-none absolute inset-x-0 z-30 flex justify-center" role="status" aria-live="polite">

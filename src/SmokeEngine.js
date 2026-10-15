@@ -101,17 +101,11 @@ export default class SmokeEngine {
     });
     this.listen(window, 'resize', () => this.resize());
     this.listen(window, 'blur', () => this.releasePointers());
-    this.listen(canvas, 'pointerdown', (event) => this.pointerDown(event));
-    this.listen(canvas, 'pointermove', (event) => this.pointerMove(event));
-    this.listen(canvas, 'pointerup', (event) => this.pointerUp(event));
-    this.listen(canvas, 'pointercancel', (event) => this.pointerUp(event));
-    this.listen(canvas, 'lostpointercapture', (event) => this.pointerUp(event));
-    this.listen(canvas, 'pointerenter', (event) => this.pointerEnter(event));
-    this.listen(canvas, 'pointerleave', () => {
-      this.hoverPoint = null;
-      this.cursor.classList.remove('is-visible');
-      if (!this.pointers.size) this.onActivity(false);
-    });
+    this.bindInput();
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.resize());
+      this.resizeObserver.observe(canvas);
+    }
     this.listen(canvas, 'keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') {
         event.preventDefault();
@@ -127,15 +121,66 @@ export default class SmokeEngine {
     this.frame = requestAnimationFrame((time) => this.render(time));
   }
   fallback() { this.renderer = new CanvasSmoke(); this.canvas.dataset.renderer = 'canvas-smoke'; }
-  listen(target, event, handler) {
-    target.addEventListener(event, handler);
-    this.listeners.push(() => target.removeEventListener(event, handler));
+  listen(target, event, handler, options) {
+    target.addEventListener(event, handler, options);
+    this.listeners.push(() => target.removeEventListener(event, handler, options));
+  }
+  bindInput() {
+    const canvas = this.canvas;
+    const leave = () => {
+      this.hoverPoint = null;
+      this.cursor.classList.remove('is-visible');
+      if (!this.pointers.size) this.onActivity(false);
+    };
+    if (typeof window.PointerEvent !== 'undefined') {
+      this.listen(canvas, 'pointerdown', (event) => this.pointerDown(event));
+      this.listen(canvas, 'pointermove', (event) => this.pointerMove(event));
+      this.listen(window, 'pointerup', (event) => this.pointerUp(event));
+      this.listen(window, 'pointercancel', (event) => this.pointerUp(event));
+      this.listen(canvas, 'lostpointercapture', (event) => this.pointerUp(event));
+      this.listen(canvas, 'pointerenter', (event) => this.pointerEnter(event));
+      this.listen(canvas, 'pointerleave', leave);
+      return;
+    }
+    // Some embedded Tizen browsers expose only the older mouse/touch APIs.
+    const mouse = (event) => ({
+      pointerId: 1, pointerType: 'mouse', button: event.button,
+      clientX: event.clientX, clientY: event.clientY,
+      preventDefault: () => event.preventDefault(),
+    });
+    this.listen(canvas, 'mouseenter', (event) => this.pointerEnter(mouse(event)));
+    this.listen(canvas, 'mouseleave', leave);
+    this.listen(canvas, 'mousedown', (event) => this.pointerDown(mouse(event)));
+    this.listen(canvas, 'mousemove', (event) => this.pointerMove(mouse(event)));
+    this.listen(window, 'mousemove', (event) => {
+      if (event.target !== canvas && this.pointers.has(1)) this.pointerMove(mouse(event));
+    });
+    this.listen(window, 'mouseup', (event) => this.pointerUp(mouse(event)));
+    const touches = (handler) => (event) => {
+      for (let index = 0; index < event.changedTouches.length; index++) {
+        const touch = event.changedTouches[index];
+        handler.call(this, {
+          pointerId: touch.identifier + 2, pointerType: 'touch', button: 0,
+          clientX: touch.clientX, clientY: touch.clientY,
+          preventDefault: () => event.preventDefault(),
+        });
+      }
+    };
+    this.listen(canvas, 'touchstart', touches(this.pointerDown), { passive: false });
+    this.listen(canvas, 'touchmove', (event) => {
+      event.preventDefault();
+      touches(this.pointerMove)(event);
+    }, { passive: false });
+    this.listen(window, 'touchend', touches(this.pointerUp));
+    this.listen(window, 'touchcancel', touches(this.pointerUp));
   }
   resize() {
     const { width, height } = this.canvas.getBoundingClientRect();
     if (width === this.width && height === this.height) return;
     this.width = width; this.height = height;
-    this.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // Drawing resolution is independent of the CSS interaction area. Capping
+    // the backing buffer keeps large embedded displays within GPU limits.
+    this.dpr = Math.min(window.devicePixelRatio || 1, 1.5, 1920 / width, 1080 / height);
     this.canvas.width = Math.round(width * this.dpr);
     this.canvas.height = Math.round(height * this.dpr);
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
@@ -165,7 +210,10 @@ export default class SmokeEngine {
     const point = this.point(event);
     this.hoverPoint = null;
     this.pointers.set(event.pointerId, { ...point, emitted: this.time, held: this.time });
-    this.canvas.setPointerCapture(event.pointerId); this.moveCursor(event);
+    if (typeof window.PointerEvent !== 'undefined' && this.canvas.setPointerCapture) {
+      try { this.canvas.setPointerCapture(event.pointerId); } catch { /* Embedded browsers may reject capture. */ }
+    }
+    this.moveCursor(event);
     this.cursor.classList.add('is-pressed'); this.onActivity(true);
     this.emit(point.x, point.y, true);
   }
@@ -266,6 +314,7 @@ export default class SmokeEngine {
   }
   destroy() {
     this.disposed = true; cancelAnimationFrame(this.frame);
+    this.resizeObserver?.disconnect();
     this.listeners.forEach((remove) => remove()); this.renderer.destroy();
   }
 }
