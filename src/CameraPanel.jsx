@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { HAND_CONNECTIONS, readHandGesture } from './handGestures.js';
 import { openCamera, supportsWorkerTracking } from './cameraSupport.js';
+import { createLegacyHandTracker } from './legacyHandTracker.js';
+import handWorkerUrl from './handTracking.worker.js?worker&url';
 
 const labels = {
   camera: '카메라 연결 중…',
@@ -178,7 +180,6 @@ export default function CameraPanel({ engineRef, onError }) {
       clearTimeout(loadTimeout);
       loadTimeout = setTimeout(() => fail('손 인식 준비 시간이 초과되었습니다. 캠을 다시 켜 주세요.'), 45000);
       try {
-        const { createLegacyHandTracker } = await import('./legacyHandTracker.js');
         if (!active) return;
         const assetRoot = new URL(`${import.meta.env.BASE_URL}mediapipe/hands/`, window.location.href).href;
         legacyTracker = createLegacyHandTracker(assetRoot, handleResult);
@@ -203,7 +204,7 @@ export default function CameraPanel({ engineRef, onError }) {
         setPhase('model');
         if (supportsWorkerTracking()) {
           try {
-            worker = new Worker(new URL('./handTracking.worker.js', import.meta.url), { type: 'module' });
+            worker = new Worker(handWorkerUrl, { type: 'module' });
             worker.onerror = (event) => { event.preventDefault(); startLegacyTracker(); };
             worker.onmessage = ({ data }) => {
               if (!active || legacyStarting) return;

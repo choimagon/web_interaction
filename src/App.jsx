@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, MotionConfig } from 'motion/react';
 import SmokeEngine from './SmokeEngine.js';
 import CameraPanel from './CameraPanel.jsx';
@@ -34,6 +34,7 @@ function RangeControl({ label, icon, value, onChange }) {
 }
 
 export default function App() {
+  const playgroundRef = useRef(null);
   const canvasRef = useRef(null);
   const cursorRef = useRef(null);
   const engineRef = useRef(null);
@@ -44,10 +45,42 @@ export default function App() {
   const [status, setStatus] = useState('');
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const [viewportClasses, setViewportClasses] = useState('');
 
   const handleCameraError = useCallback((message) => {
     setCameraOn(false);
     setCameraError(message);
+  }, []);
+
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport;
+    function fitViewport() {
+      const element = playgroundRef.current;
+      const width = viewport?.width || window.innerWidth;
+      const height = viewport?.height || window.innerHeight;
+      element.style.width = `${width}px`;
+      element.style.height = `${height}px`;
+      element.style.left = `${viewport?.offsetLeft || 0}px`;
+      element.style.top = `${viewport?.offsetTop || 0}px`;
+      // Media queries describe the layout viewport, which can be much larger
+      // than the visible area while the embedded browser is zoomed in.
+      setViewportClasses([
+        width < 760 ? 'is-compact' : 'is-wide',
+        width < 1280 ? 'is-narrow' : '',
+        width >= 1800 ? 'is-large' : '',
+        height <= 500 ? 'is-short' : '',
+      ].filter(Boolean).join(' '));
+      engineRef.current?.resize();
+    }
+    fitViewport();
+    window.addEventListener('resize', fitViewport);
+    viewport?.addEventListener?.('resize', fitViewport);
+    viewport?.addEventListener?.('scroll', fitViewport);
+    return () => {
+      window.removeEventListener('resize', fitViewport);
+      viewport?.removeEventListener?.('resize', fitViewport);
+      viewport?.removeEventListener?.('scroll', fitViewport);
+    };
   }, []);
 
   useEffect(() => {
@@ -86,14 +119,14 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <main className={`playground relative isolate w-full overflow-hidden text-white ${cameraOn ? 'is-camera-mode' : ''}`}>
+      <main ref={playgroundRef} className={`playground isolate overflow-hidden text-white ${viewportClasses} ${cameraOn ? 'is-camera-mode' : ''}`}>
         <div className="galaxy-background" aria-hidden="true" />
         <canvas ref={canvasRef} className="smoke-canvas" tabIndex={0} role="button" aria-label={cameraOn ? '컬러 연기 캔버스. 검지만 펴서 움직이면 그려지고 손바닥을 펴면 포인터가 가운데로 돌아옵니다.' : '컬러 연기 캔버스. 마우스를 움직이거나 터치해서 그리세요. Enter와 스페이스로도 그릴 수 있습니다.'} />
         <div ref={cursorRef} className="canvas-cursor" aria-hidden="true"><span /></div>
         {cameraOn && <CameraPanel engineRef={engineRef} onError={handleCameraError} />}
         <div className="control-area">
           {cameraError && <div className="camera-error" role="alert"><span>{cameraError}</span><button type="button" onClick={() => setCameraError('')} aria-label="카메라 안내 닫기">×</button></div>}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="toolbar" role="group" aria-label="캔버스 설정">
+          <div className="toolbar" role="group" aria-label="캔버스 설정">
             <div className="palette-group" role="group" aria-label="색상 팔레트">
               {palettes.map((item) => (
                 <motion.button key={item.id} whileTap={{ scale: 0.92 }} onClick={() => setPalette(item.id)} className={`swatch ${palette === item.id ? 'is-selected' : ''}`} aria-label={item.label} aria-pressed={palette === item.id} title={item.label}>
@@ -111,7 +144,7 @@ export default function App() {
               <motion.button whileTap={{ scale: 0.92 }} className="tool-button" onClick={reset} aria-label="캔버스 초기화" title="초기화"><Icon name="reset" /></motion.button>
               <motion.button whileTap={{ scale: 0.92 }} className="tool-button" onClick={toggleFullscreen} aria-label={fullscreen ? '전체 화면 닫기' : '전체 화면으로 보기'} title="전체 화면"><Icon name={fullscreen ? 'collapse' : 'expand'} /></motion.button>
             </div>
-          </motion.div>
+          </div>
         </div>
         <div className="sr-only" role="status" aria-live="polite">{status}</div>
       </main>
