@@ -88,7 +88,7 @@ export default class SmokeEngine {
     this.palette = 'rainbow'; this.size = 60; this.auto = false;
     this.time = 0; this.lastFrame = 0; this.lastAuto = 0; this.lastAmbient = 0;
     this.hue = random(0, 360); this.hasInteracted = false; this.disposed = false;
-    this.pointers = new Map(); this.splats = []; this.listeners = [];
+    this.pointers = new Map(); this.hoverPoint = null; this.splats = []; this.listeners = [];
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     try {
       this.renderer = new WebGLFluid();
@@ -106,8 +106,12 @@ export default class SmokeEngine {
     this.listen(canvas, 'pointerup', (event) => this.pointerUp(event));
     this.listen(canvas, 'pointercancel', (event) => this.pointerUp(event));
     this.listen(canvas, 'lostpointercapture', (event) => this.pointerUp(event));
-    this.listen(canvas, 'pointerenter', (event) => this.moveCursor(event));
-    this.listen(canvas, 'pointerleave', () => this.cursor.classList.remove('is-visible'));
+    this.listen(canvas, 'pointerenter', (event) => this.pointerEnter(event));
+    this.listen(canvas, 'pointerleave', () => {
+      this.hoverPoint = null;
+      this.cursor.classList.remove('is-visible');
+      if (!this.pointers.size) this.onActivity(false);
+    });
     this.listen(canvas, 'keydown', (event) => {
       if (event.code === 'Space' || event.code === 'Enter') {
         event.preventDefault();
@@ -147,10 +151,19 @@ export default class SmokeEngine {
     this.cursor.style.left = `${event.clientX}px`; this.cursor.style.top = `${event.clientY}px`;
     this.cursor.classList.add('is-visible');
   }
+  pointerEnter(event) {
+    this.moveCursor(event);
+    if (event.pointerType !== 'mouse' || this.pointers.has(event.pointerId)) return;
+    const point = this.point(event);
+    this.hoverPoint = { ...point, emitted: this.time, held: this.time };
+    this.onActivity(true);
+    this.emit(point.x, point.y);
+  }
   pointerDown(event) {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault();
     const point = this.point(event);
+    this.hoverPoint = null;
     this.pointers.set(event.pointerId, { ...point, emitted: this.time, held: this.time });
     this.canvas.setPointerCapture(event.pointerId); this.moveCursor(event);
     this.cursor.classList.add('is-pressed'); this.onActivity(true);
@@ -158,7 +171,13 @@ export default class SmokeEngine {
   }
   pointerMove(event) {
     this.moveCursor(event);
-    const previous = this.pointers.get(event.pointerId);
+    const pressed = this.pointers.has(event.pointerId);
+    const hovering = event.pointerType === 'mouse' && !pressed;
+    if (hovering && !this.hoverPoint) {
+      this.pointerEnter(event);
+      return;
+    }
+    const previous = pressed ? this.pointers.get(event.pointerId) : hovering ? this.hoverPoint : null;
     if (!previous) return;
     const point = this.point(event);
     const dx = point.x - previous.x; const dy = point.y - previous.y;
@@ -166,15 +185,24 @@ export default class SmokeEngine {
     if (distance < 4 || this.time - previous.emitted < 22) return;
     const steps = Math.min(5, Math.ceil(distance / 18));
     for (let index = 1; index <= steps; index++) this.emit(previous.x + dx * index / steps, previous.y + dy * index / steps, false, dx / steps, dy / steps);
-    this.pointers.set(event.pointerId, { ...point, emitted: this.time, held: this.time });
+    const next = { ...point, emitted: this.time, held: this.time };
+    if (pressed) this.pointers.set(event.pointerId, next);
+    else this.hoverPoint = next;
   }
   pointerUp(event) {
     if (!this.pointers.delete(event.pointerId)) return;
-    if (!this.pointers.size) { this.cursor.classList.remove('is-pressed'); this.onActivity(false); }
+    if (event.pointerType === 'mouse') {
+      const point = this.point(event);
+      if (point.x >= 0 && point.x <= this.width && point.y >= 0 && point.y <= this.height) {
+        this.hoverPoint = { ...point, emitted: this.time, held: this.time };
+      }
+    }
+    if (!this.pointers.size) { this.cursor.classList.remove('is-pressed'); this.onActivity(Boolean(this.hoverPoint)); }
     if (event.pointerType === 'touch') this.cursor.classList.remove('is-visible');
   }
   releasePointers() {
-    this.pointers.clear(); this.cursor.classList.remove('is-pressed', 'is-visible'); this.onActivity(false);
+    this.pointers.clear(); this.hoverPoint = null;
+    this.cursor.classList.remove('is-pressed', 'is-visible'); this.onActivity(false);
   }
   color() {
     this.hue = (this.hue + random(2, 7)) % 360;
@@ -223,6 +251,10 @@ export default class SmokeEngine {
     this.pointers.forEach((point) => {
       if (this.time - point.held > 100) { this.emit(point.x, point.y); point.held = this.time; }
     });
+    if (this.hoverPoint && this.time - this.hoverPoint.held > 160) {
+      this.emit(this.hoverPoint.x, this.hoverPoint.y);
+      this.hoverPoint.held = this.time;
+    }
     this.splats.splice(0).forEach((splat) => this.renderer.splat(splat.x, splat.y, splat.dx, splat.dy, splat.color, splat.size, splat.boost));
     this.renderer.step(Math.min(delta / 1000, 0.028) * (this.reducedMotion ? 0.4 : 0.8));
     this.ctx.clearRect(0, 0, this.width, this.height);

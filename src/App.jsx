@@ -129,7 +129,7 @@ export default function App() {
           className="smoke-canvas absolute inset-0 h-full w-full touch-none"
           tabIndex={0}
           role="button"
-          aria-label="컬러 연기 만들기. 마우스를 누른 채 움직이거나 손가락으로 터치하세요. 키보드에서는 Enter 또는 스페이스를 누르세요."
+          aria-label="컬러 연기 만들기. 마우스를 올리거나 움직이면 연기가 피어납니다. 모바일에서는 손가락으로 터치하세요. 키보드에서는 Enter 또는 스페이스를 누르세요."
         />
         <div ref={cursorRef} className="canvas-cursor pointer-events-none fixed z-40" aria-hidden="true"><span /></div>
 
@@ -150,8 +150,8 @@ export default function App() {
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: drawing ? 0.16 : 1, y: 0 }} transition={{ ...reveal, delay: 0.1 }}>
             <div className="eyebrow mb-7 flex items-center gap-3 text-[10px] tracking-[0.21em] text-white/50"><span className="eyebrow-line" />LET YOUR CURIOSITY FLOW</div>
             <h1 id="hero-title" className="hero-title"><span className="block">Let it</span><span className="flow-word block">flow<span className="title-dot">.</span></span></h1>
-            <p className="hero-description mt-8 text-[13px] leading-[1.95] text-[#92919e]">아무 곳이나 누르고, 움직여 보세요.<br />손끝에서 피어나는, 당신만의 색.</p>
-            <button onClick={previewSmoke} className="explore-hint pointer-events-auto mt-9 inline-flex items-center gap-3" aria-label="연기 효과 미리 보기"><span className="mouse-icon"><Icon name="mouse" size={17} /></span><span>CLICK & DRAG TO EXPLORE</span><Icon name="arrow" size={13} /></button>
+            <p className="hero-description mt-8 text-[13px] leading-[1.95] text-[#92919e]">마우스를 움직이거나, 가볍게 터치해 보세요.<br />손끝에서 피어나는, 당신만의 색.</p>
+            <button onClick={previewSmoke} className="explore-hint pointer-events-auto mt-9 inline-flex items-center gap-3" aria-label="연기 효과 미리 보기"><span className="mouse-icon"><Icon name="mouse" size={17} /></span><span>MOVE TO EXPLORE</span><Icon name="arrow" size={13} /></button>
           </motion.div>
         </section>
 
@@ -228,7 +228,7 @@ function HelpDialog({ onClose, reducedMotion }) {
         <p className="mt-6 text-[9px] tracking-[0.24em] text-white/40">A MOMENT TO PLAY</p>
         <h2 id="help-title" className="mt-2 text-3xl font-medium tracking-[-0.04em]">당신의 움직임이, 색으로.</h2>
         <div className="mt-6 space-y-5 text-[13px] leading-7 text-white/55">
-          <p><span className="text-white/90">클릭하고 드래그</span>해 보세요.<br />모바일에서는 손가락으로 자유롭게 움직여 보세요.</p>
+          <p><span className="text-white/90">마우스를 올리고 자유롭게 움직여</span> 보세요.<br />머무는 곳에서도 색이 피어나요. 모바일에서는 손가락으로 터치해 보세요.</p>
           <p>컬러와 연기 크기를 바꾸거나, <span className="text-white/90">자동 재생</span>을 켜고 잠시 색의 흐름을 감상해도 좋아요.</p>
           <p className="text-[11px] text-white/35">키보드로도 즐길 수 있어요. 캔버스에 포커스를 두고 Enter 또는 스페이스를 눌러보세요.</p>
         </div>
