@@ -1,6 +1,6 @@
 # prism — Color in space.
 
-어두운 푸른 은하 배경 위에 부드럽게 확산되는 컬러 연기를 그리는 반응형 캔버스입니다. 화면에는 캔버스와 하단 조작 바만 표시합니다.
+멀리 펼쳐진 은하와 넓은 어둠을 배경으로, 부드럽게 확산되는 컬러 연기를 그리는 반응형 캔버스입니다. 화면에는 캔버스와 하단 조작 바만 표시합니다.
 
 React + Tailwind CSS + Motion을 사용하며, `index.html`이 Vite의 진입점입니다. 연기는 WebGL 유체 시뮬레이션으로 구현했고, 지원하지 않는 환경에서는 Canvas 2D 효과로 전환합니다.
 
@@ -36,8 +36,8 @@ npm run preview
 
 ## 배경 이미지
 
-- 경로: `public/images/galaxy.png`
-- 제작: 내장 imagegen 도구, 사용자 참고 이미지를 바탕으로 별 밀도를 줄인 은하 배경.
+- 경로: `public/images/galaxy-vast-v2.png`
+- 제작: 내장 imagegen 도구로 기존 배경을 편집. 성운을 더 멀고 가늘게 배치하고, 별과 밝기를 줄여 넓은 우주 공간을 표현합니다. CSS의 어두운 오버레이와 가장자리 음영을 함께 적용합니다.
 - 최종 프롬프트:
 
-> Edit the supplied galaxy reference into a wide 16:9 website background. Keep the deep navy and soft blue Milky Way feeling, but use far fewer stars, only about 100 sparse tiny points across the whole image. Soft cyan nebula, darker open areas for colorful interactive gel to stand out. No text, no planets, no interface.
+> Edit this background into a much darker, more expansive deep-space panorama, 16:9. Pull the viewpoint far back: the blue Milky Way becomes a very distant, thin, gently diagonal ribbon, with huge near-black navy areas around it. About 80 percent of the composition is quiet open space. Keep only 35 to 50 very small, faint, widely separated stars, with subtle size variation suggesting immense depth. Preserve the blue palette but lower the nebula luminosity substantially; atmospheric and restrained, not a bright close-up cloud. No planets, text, borders, interface, or lens flares.
