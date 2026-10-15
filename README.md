@@ -53,6 +53,10 @@ npm run dev
 
 - 클릭 없이 마우스를 올리고 움직여 색을 그립니다. 마우스가 머무는 곳에서도 연기가 피어납니다.
 - 모바일에서는 손가락으로 터치하거나 드래그해 사용할 수 있습니다.
+- 하단 **캠 OFF / ON** 버튼으로 손 인식 모드를 켜고 끕니다. OFF에서는 기존 마우스·터치 조작을 사용합니다.
+- 캠 ON에서 카메라 권한을 허용하면 좌측 하단에 좌우 반전된 미리보기와 손 인식 표시가 나타납니다. **검지만 펴서 움직이면** 검지 끝을 따라 흰색 포인터가 이동하며 연기를 그립니다. 엄지는 편한 위치에 두어도 됩니다.
+- **다섯 손가락을 모두 펴면** 포인터가 캔버스 가운데로 돌아오고 그리기가 멈춥니다. 다른 손 모양이나 손 인식 끊김에서도 그리기가 멈춥니다.
+- 카메라는 `localhost` 또는 HTTPS에서 사용하세요. USB 카메라도 기본 영상 입력으로 사용할 수 있습니다. 캠을 끄면 카메라 트랙과 손 인식 처리를 종료합니다. 카메라 영상은 브라우저 안에서 처리하며 서버에 전송하지 않습니다.
 - 빨강·파랑·노랑·초록 계열 중 하나를 선택하고 굵기를 조절합니다.
 - 자동 재생으로 색의 흐름을 감상하고 초기화 버튼으로 화면을 비웁니다.
 - 캔버스에 키보드 포커스를 두고 Enter 또는 스페이스를 눌러도 사용할 수 있습니다.
@@ -65,6 +69,38 @@ npm run preview
 ```
 
 배포용 파일은 `dist/`에 생성됩니다.
+
+## 손 인식
+
+[MediaPipe Hand Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js)의 `@mediapipe/tasks-vision` 1.1.1과 구형 환경용 [MediaPipe Hands](https://github.com/google-ai-edge/mediapipe/blob/master/docs/solutions/hands.md) 0.4.1675469240을 사용합니다.
+
+| 환경 | 손 인식 경로 |
+| --- | --- |
+| OffscreenCanvas, Worker, WebAssembly SIMD 지원 | 별도 Worker에서 GPU 우선, 초기화 실패 시 CPU로 재시도 |
+| Tizen 5.x 등 해당 기능이 없는 환경, Worker 초기화 실패 | 메인 화면의 Canvas에서 MediaPipe Hands 경량 모델(`modelComplexity: 0`). 런타임이 SIMD / 비 SIMD 바이너리를 선택 |
+
+최대 초당 30프레임으로 한 프레임씩 처리하며 이전 영상을 대기열에 쌓지 않습니다. 검지 자세는 첫 결과부터 반영하고, 이동량이 클수록 위치 보정을 줄입니다. 손바닥 중앙 복귀는 두 프레임을 확인합니다. 실제 인식 속도는 기기 성능과 카메라 출력 속도에 따라 달라집니다.
+
+- 공식 모델: `public/mediapipe/hand_landmarker.task` ([Google 모델 원본](https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task), Apache 2.0).
+- WASM과 로더는 설치된 npm 패키지에서 Vite가 함께 제공합니다. 실행 중 외부 CDN 연결은 필요하지 않습니다.
+- `npm run dev`와 `npm run build`는 `scripts/prepare-camera.mjs`로 구형 런타임을 `public/mediapipe/hands/`에 자동 복사합니다. 이 생성 폴더는 Git에서 제외하며 `npm install` 후 다시 생성됩니다.
+- 캠을 사용하지 않거나 카메라를 열 수 없는 환경에서는 기존 마우스·터치 입력과 렌더러를 계속 사용합니다.
+
+## Tizen 5.1 + USB 카메라
+
+Chromium 63을 기준으로 앱 코드를 빌드합니다. [삼성 공식 엔진 표](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html)에서 Tizen 5.0은 Chromium 63으로 안내하며, 정확한 모니터 모델과 펌웨어의 기능은 기기에서 확인해야 합니다.
+
+1. 모니터가 지원하는 USB 카메라를 연결하고 운영체제에서 인식되는지 확인합니다.
+2. 빌드 결과 전체를 HTTPS 서버에 올려 기본 브라우저에서 엽니다. 다른 기기에서 접속할 때 PC의 `localhost` 주소는 사용할 수 없습니다.
+3. 캠 버튼을 켜고 카메라 권한을 허용합니다. 전면 카메라 조건을 지정하지 않아 USB 영상 입력을 사용할 수 있습니다. 구형 `webkitGetUserMedia` API만 있는 경우에도 연결을 시도합니다.
+4. 설치형 Tizen 웹 앱으로 감싸는 경우 `config.xml`에 `http://tizen.org/privilege/mediacapture`를 선언해야 합니다. [Tizen 권한 문서](https://docs.tizen.org/application/web/tutorials/sec-privileges/)를 참고하세요.
+
+손 인식에는 기기의 카메라 접근, WebAssembly, WebGL 지원이 필요합니다. 카메라 미지원 또는 권한 오류가 발생하면 안내를 표시하고 캠을 끕니다. 실기기에서 USB 카메라의 노출 여부와 인식 성능은 별도 확인이 필요합니다.
+
+```sh
+npm test
+npm run build
+```
 
 ## 배경 이미지
 

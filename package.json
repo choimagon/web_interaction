@@ -4,11 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare:camera": "node scripts/prepare-camera.mjs",
+    "predev": "npm run prepare:camera",
     "dev": "vite --host 127.0.0.1",
+    "prebuild": "npm run prepare:camera",
     "build": "vite build",
+    "test": "node --test",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@mediapipe/hands": "0.4.1675469240",
+    "@mediapipe/tasks-vision": "1.1.1",
     "motion": "^14.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
