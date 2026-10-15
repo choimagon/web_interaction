@@ -50,7 +50,6 @@ const shaders = {
     uniform sampler2D uDye;
     uniform vec2 texelSize;
     uniform float dt;
-    uniform float curlStrength;
     void main () {
       float L = texture(uCurl, vUv - vec2(texelSize.x, 0)).x;
       float R = texture(uCurl, vUv + vec2(texelSize.x, 0)).x;
@@ -59,25 +58,13 @@ const shaders = {
       float C = texture(uCurl, vUv).x;
       vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
       force /= length(force) + 0.0001;
-      force *= curlStrength * C;
+      force *= 18.0 * C;
       force.y *= -1.0;
       vec2 velocity = texture(uVelocity, vUv).xy;
+      float density = length(texture(uDye, vUv).rgb);
       velocity += force * dt;
+      velocity.y += min(density, 1.0) * dt * 5.0;
       fragColor = vec4(clamp(velocity, vec2(-800), vec2(800)), 0, 1);
-    }
-  `),
-  viscosity: fragment(`
-    uniform sampler2D uOriginal;
-    uniform sampler2D uVelocity;
-    uniform vec2 texelSize;
-    uniform float alpha;
-    void main () {
-      vec2 neighbors = texture(uVelocity, vUv-vec2(texelSize.x,0)).xy
-        + texture(uVelocity, vUv+vec2(texelSize.x,0)).xy
-        + texture(uVelocity, vUv-vec2(0,texelSize.y)).xy
-        + texture(uVelocity, vUv+vec2(0,texelSize.y)).xy;
-      vec2 original = texture(uOriginal, vUv).xy;
-      fragColor = vec4((original+alpha*neighbors)/(1.0+4.0*alpha),0,1);
     }
   `),
   divergence: fragment(`
@@ -145,7 +132,7 @@ const shaders = {
     uniform sampler2D uDye;
     uniform vec2 texelSize;
     void main () {
-      vec2 blur = texelSize * 0.8;
+      vec2 blur = texelSize * 2.5;
       vec3 color = texture(uDye, vUv).rgb * 0.4;
       color += texture(uDye, vUv - vec2(blur.x, 0)).rgb * 0.15;
       color += texture(uDye, vUv + vec2(blur.x, 0)).rgb * 0.15;
@@ -153,15 +140,9 @@ const shaders = {
       color += texture(uDye, vUv + vec2(0, blur.y)).rgb * 0.15;
       color = max(color, vec3(0));
       float density = max(color.r, max(color.g, color.b));
-      vec3 pigment = pow(color / max(density, 0.00001), vec3(1.1));
-      float alpha = smoothstep(0.018, 0.38, density) * 0.96;
-      float L = length(texture(uDye,vUv-vec2(texelSize.x,0)).rgb);
-      float R = length(texture(uDye,vUv+vec2(texelSize.x,0)).rgb);
-      float T = length(texture(uDye,vUv+vec2(0,texelSize.y)).rgb);
-      float B = length(texture(uDye,vUv-vec2(0,texelSize.y)).rgb);
-      vec3 normal = normalize(vec3((R-L)*2.0,(T-B)*2.0,0.3));
-      float gloss = pow(max(dot(normal,normalize(vec3(-0.5,0.6,1))),0.0),24.0)*0.12;
-      fragColor = vec4(mix(pigment,vec3(1),gloss) * alpha, alpha);
+      vec3 pigment = pow(color / max(density, 0.00001), vec3(1.2));
+      float alpha = 1.0 - exp(-density * 1.65);
+      fragColor = vec4(pigment * alpha, alpha);
     }
   `),
 };
@@ -265,7 +246,6 @@ export default class WebGLFluid {
     this.texelSize = [1 / sw, 1 / sh];
     this.dyeTexelSize = [1 / dw, 1 / dh];
     this.velocity = this.doubleTarget(sw, sh);
-    this.viscositySource = this.createTarget(sw, sh);
     this.dye = this.doubleTarget(dw, dh);
     this.pressure = this.doubleTarget(sw, sh, false);
     this.curl = this.createTarget(sw, sh, false);
@@ -298,7 +278,7 @@ export default class WebGLFluid {
   }
 
   splat(x, y, dx, dy, color, size = 60, boost = 1) {
-    const radius = (0.00012 + Math.pow(size / 100, 2) * 0.0008) * boost;
+    const radius = (0.00022 + Math.pow(size / 100, 2) * 0.0014) * boost;
     const values = { aspectRatio: this.aspect, point: [x, y], radius };
     this.pass('splat', this.velocity.write, { ...values, uTarget: this.velocity.read, color: [dx, dy, 0] });
     this.velocity.swap();
@@ -306,17 +286,11 @@ export default class WebGLFluid {
     this.dye.swap();
   }
 
-  step(dt, viscosity = 0.82) {
+  step(dt) {
     const texelSize = this.texelSize;
     this.pass('curl', this.curl, { texelSize, uVelocity: this.velocity.read });
-    this.pass('vorticity', this.velocity.write, { texelSize, uVelocity: this.velocity.read, uCurl: this.curl, dt, curlStrength: 2 + (1-viscosity)*6 });
+    this.pass('vorticity', this.velocity.write, { texelSize, uVelocity: this.velocity.read, uCurl: this.curl, uDye: this.dye.read, dt });
     this.velocity.swap();
-    this.pass('copy', this.viscositySource, { uTexture: this.velocity.read, value: 1 });
-    // An implicit viscosity solve smooths momentum without blurring the pigment.
-    for (let index = 0; index < 6; index++) {
-      this.pass('viscosity', this.velocity.write, { texelSize, uOriginal: this.viscositySource, uVelocity: this.velocity.read, alpha: viscosity*dt*110 });
-      this.velocity.swap();
-    }
     this.pass('divergence', this.divergence, { texelSize, uVelocity: this.velocity.read });
     this.pass('copy', this.pressure.write, { uTexture: this.pressure.read, value: 0.75 });
     this.pressure.swap();
@@ -326,9 +300,9 @@ export default class WebGLFluid {
     }
     this.pass('gradient', this.velocity.write, { texelSize, uPressure: this.pressure.read, uVelocity: this.velocity.read });
     this.velocity.swap();
-    this.pass('advection', this.velocity.write, { texelSize, sourceTexelSize: texelSize, uVelocity: this.velocity.read, uSource: this.velocity.read, dt, dissipation: 2 + viscosity*6, diffusion: 0 });
+    this.pass('advection', this.velocity.write, { texelSize, sourceTexelSize: texelSize, uVelocity: this.velocity.read, uSource: this.velocity.read, dt, dissipation: 1.2, diffusion: 0 });
     this.velocity.swap();
-    this.pass('advection', this.dye.write, { texelSize, sourceTexelSize: this.dyeTexelSize, uVelocity: this.velocity.read, uSource: this.dye.read, dt, dissipation: 0.45 + viscosity*0.35, diffusion: 0.015 });
+    this.pass('advection', this.dye.write, { texelSize, sourceTexelSize: this.dyeTexelSize, uVelocity: this.velocity.read, uSource: this.dye.read, dt, dissipation: 0.27, diffusion: 0.12 });
     this.dye.swap();
   }
 

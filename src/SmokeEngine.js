@@ -11,12 +11,14 @@ function hueColor(hue, brightness = 0.26) {
   return [channel(5), channel(3), channel(1)];
 }
 
-// Compact, damped pigment also works on embedded browsers without float WebGL.
+// A soft textured fallback also works on devices without floating-point WebGL.
 class CanvasSmoke {
   constructor() {
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
-    this.particles = []; this.sprites = new Map(); this.time = 0; this.viscosity = 0.82;
+    this.particles = [];
+    this.sprites = new Map();
+    this.time = 0;
   }
   resize(width, height, dpr) {
     this.width = width; this.height = height;
@@ -25,59 +27,51 @@ class CanvasSmoke {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   sprite(color) {
-    const rgb = color.map((channel) => Math.min(255, Math.round(channel * 2.4 * 255 / 16) * 16));
+    const rgb = color.map((channel) => Math.round(channel * 3 * 255 / 32) * 32);
     const key = rgb.join(',');
     if (this.sprites.has(key)) return this.sprites.get(key);
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 160;
     const ctx = canvas.getContext('2d');
-    for (let index = 0; index < 5; index++) {
-      const x = index === 0 ? 80 : random(68, 92);
-      const y = index === 0 ? 80 : random(68, 92);
-      const radius = index === 0 ? 51 : random(29, 39);
-      const gradient = ctx.createRadialGradient(x-4, y-5, 0, x, y, radius);
-      gradient.addColorStop(0, `rgba(${rgb.join(',')},0.85)`);
-      gradient.addColorStop(0.5, `rgba(${rgb.join(',')},0.75)`);
-      gradient.addColorStop(0.78, `rgba(${rgb.join(',')},0.36)`);
+    for (let index = 0; index < 9; index++) {
+      const x = index === 0 ? 80 : random(47, 113);
+      const y = index === 0 ? 80 : random(47, 113);
+      const radius = random(28, 47);
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      gradient.addColorStop(0, `rgba(${rgb.join(',')},0.28)`);
+      gradient.addColorStop(0.35, `rgba(${rgb.join(',')},0.13)`);
       gradient.addColorStop(1, `rgba(${rgb.join(',')},0)`);
       ctx.fillStyle = gradient;
-      ctx.fillRect(x-radius, y-radius, radius*2, radius*2);
+      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
     }
-    if (this.sprites.size > 36) this.sprites.delete(this.sprites.keys().next().value);
+    if (this.sprites.size > 30) this.sprites.delete(this.sprites.keys().next().value);
     this.sprites.set(key, canvas);
     return canvas;
   }
   splat(x, y, dx, dy, color, size, boost = 1) {
-    for (let index = 0; index < 2; index++) this.particles.push({
-      x: x*this.width+random(-2, 2), y: (1-y)*this.height+random(-2, 2),
-      vx: dx*0.0002, vy: -dy*0.0002,
-      size: (23+size*0.7)*Math.sqrt(boost), born: this.time,
-      phase: random(0, Math.PI*2), rotation: random(-1, 1), sprite: this.sprite(color), life: random(2200, 3000),
+    for (let index = 0; index < 3; index++) this.particles.push({
+      x: x * this.width + random(-8, 8), y: (1 - y) * this.height + random(-8, 8),
+      vx: dx * 0.0005 + random(-0.015, 0.015), vy: -dy * 0.0005 - random(0.008, 0.03),
+      size: (35 + size * 0.75) * Math.sqrt(boost), born: this.time,
+      phase: random(0, Math.PI * 2), rotation: random(-1, 1), sprite: this.sprite(color), life: random(4300, 6500),
     });
-    this.particles = this.particles.slice(-500);
+    this.particles = this.particles.slice(-280);
   }
-  step(dt, viscosity = 0.82) {
-    this.time += dt*1000; this.viscosity = viscosity;
-    const damping = Math.exp(-(3+viscosity*10)*dt);
-    this.particles.forEach((particle) => {
-      particle.vx *= damping; particle.vy *= damping;
-      particle.x += particle.vx*dt*1000; particle.y += particle.vy*dt*1000;
-    });
-  }
+  step(dt) { this.time += dt * 1000; }
   display() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
-    ctx.globalCompositeOperation = 'source-over';
-    this.particles = this.particles.filter((particle) => this.time-particle.born < particle.life);
+    ctx.globalCompositeOperation = 'screen';
+    this.particles = this.particles.filter((particle) => this.time - particle.born < particle.life);
     this.particles.forEach((particle) => {
-      const age = this.time-particle.born;
-      const progress = age/particle.life;
-      const size = particle.size*(1+progress*0.16*(1-this.viscosity*0.7));
+      const age = this.time - particle.born;
+      const progress = age / particle.life;
+      const size = particle.size * (1 + progress * 2.8);
       ctx.save();
-      ctx.globalAlpha = Math.min(1, age/55)*Math.pow(1-progress, 0.8)*0.9;
-      ctx.translate(particle.x+Math.sin(progress*3+particle.phase)*progress*2, particle.y);
-      ctx.rotate(particle.rotation+progress*0.08);
-      ctx.drawImage(particle.sprite, -size/2, -size/2, size, size);
+      ctx.globalAlpha = Math.min(1, age / 180) * Math.pow(1 - progress, 1.4) * 0.7;
+      ctx.translate(particle.x + particle.vx * age + Math.sin(progress * 4 + particle.phase) * progress * 40, particle.y + particle.vy * age);
+      ctx.rotate(particle.rotation + progress * 0.8);
+      ctx.drawImage(particle.sprite, -size / 2, -size / 2, size, size);
       ctx.restore();
     });
     return this.canvas;
@@ -91,7 +85,7 @@ export default class SmokeEngine {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.cursor = cursor; this.onActivity = onActivity;
-    this.palette = 'red'; this.size = 42; this.viscosity = 82; this.auto = false;
+    this.palette = 'red'; this.size = 60; this.auto = false;
     this.time = 0; this.lastFrame = 0; this.lastAuto = 0;
     this.disposed = false;
     this.pointers = new Map(); this.hoverPoint = null; this.splats = []; this.listeners = [];
@@ -237,7 +231,7 @@ export default class SmokeEngine {
     const dx = point.x - previous.x; const dy = point.y - previous.y;
     const distance = Math.hypot(dx, dy);
     if (distance < 4 || this.time - previous.emitted < 22) return;
-    const steps = Math.min(8, Math.ceil(distance / 12));
+    const steps = Math.min(5, Math.ceil(distance / 18));
     for (let index = 1; index <= steps; index++) this.emit(previous.x + dx * index / steps, previous.y + dy * index / steps, false, dx / steps, dy / steps);
     const next = { ...point, emitted: this.time, held: this.time };
     if (pressed) this.pointers.set(event.pointerId, next);
@@ -261,26 +255,25 @@ export default class SmokeEngine {
   color() {
     const base = { red: 0, blue: 220, yellow: 49, green: 138 }[this.palette] ?? 0;
     const variation = this.palette === 'yellow' ? 5 : 9;
-    return hueColor(base+Math.sin(this.time*0.0012)*variation, 0.4);
+    return hueColor(base+Math.sin(this.time*0.0012)*variation);
   }
   emit(x, y, burst = false, dx = 0, dy = 0) {
-    const viscosity = this.viscosity/100;
-    const force = (this.reducedMotion ? 700 : 2400)*(1-viscosity*0.65);
+    const force = this.reducedMotion ? 1800 : 5600;
     this.splats.push({
-      x: clamp(x/this.width, 0, 1), y: clamp(1-y/this.height, 0, 1),
-      dx: dx ? clamp(dx/this.width*force, -100, 100) : random(-2, 2),
-      dy: dy ? clamp(-dy/this.height*force, -100, 100) : random(-2, 2),
-      color: this.color(), size: this.size, boost: burst ? 1.15 : 1,
+      x: clamp(x / this.width, 0, 1), y: clamp(1 - y / this.height, 0, 1),
+      dx: dx ? dx / this.width * force : random(-25, 25),
+      dy: dy ? -dy / this.height * force : random(15, 35),
+      color: this.color(), size: this.size, boost: burst ? 1.8 : 1,
     });
-    this.splats = this.splats.slice(-40);
+    this.splats = this.splats.slice(-30);
   }
   render(now) {
     if (this.disposed) return;
     const delta = this.lastFrame ? Math.min(now - this.lastFrame, 48) : 16;
     this.lastFrame = now; this.time += delta;
-    if (this.auto && this.time - this.lastAuto > 45) {
+    if (this.auto && this.time - this.lastAuto > 700) {
       const t = this.time * 0.0006;
-      this.emit(this.width * (0.5 + Math.sin(t) * 0.28), this.height * (0.47 + Math.cos(t * 1.3) * 0.2), false, Math.cos(t) * 6, Math.sin(t) * 6);
+      this.emit(this.width * (0.5 + Math.sin(t) * 0.28), this.height * (0.47 + Math.cos(t * 1.3) * 0.2), true, Math.cos(t) * 15, Math.sin(t) * 15);
       this.lastAuto = this.time;
     }
     this.pointers.forEach((point) => {
@@ -291,7 +284,7 @@ export default class SmokeEngine {
       this.hoverPoint.held = this.time;
     }
     this.splats.splice(0).forEach((splat) => this.renderer.splat(splat.x, splat.y, splat.dx, splat.dy, splat.color, splat.size, splat.boost));
-    this.renderer.step(Math.min(delta / 1000, 0.028) * (this.reducedMotion ? 0.35 : 0.7), this.viscosity / 100);
+    this.renderer.step(Math.min(delta / 1000, 0.028) * (this.reducedMotion ? 0.4 : 0.8));
     this.ctx.clearRect(0, 0, this.width, this.height);
     this.ctx.drawImage(this.renderer.display(), 0, 0, this.width, this.height);
     this.frame = requestAnimationFrame((time) => this.render(time));

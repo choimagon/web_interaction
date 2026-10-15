@@ -12,7 +12,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b4cdf2; outline-
 
 /* Explicit dimensions cover embedded Tizen browsers without dvh/inset. */
 .playground { position: relative; isolation: isolate; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #030815; }
-.galaxy-background { pointer-events: none; position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(#02061132, #02061165), url('/images/galaxy.png') center center / cover no-repeat; }
+.galaxy-background { pointer-events: none; position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: linear-gradient(rgba(1,4,12,0.55), rgba(1,4,12,0.68)), url('/images/galaxy.png') center center / cover no-repeat; }
 .smoke-canvas { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
 .smoke-canvas:focus-visible { outline: 1px solid #b4cdf280; outline-offset: -5px; }
 
@@ -28,7 +28,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b4cdf2; outline-
 .swatch-check { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #101827; }
 .slider-group { display: flex; align-items: center; margin-left: 14px; padding: 0 21px; border-left: 1px solid #ffffff14; border-right: 1px solid #ffffff14; }
 .range-control { display: block; min-width: 0; width: 110px; }
-.range-control + .range-control { margin-left: 24px; }
 .range-label { display: flex; align-items: center; justify-content: space-between; font-size: 10px; color: #a9b6cb; line-height: 17px; }
 .range-name { display: inline-flex; align-items: center; }
 .range-name svg { margin-right: 5px; color: #7f91ac; }
@@ -66,8 +65,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b4cdf2; outline-
   .tool-button { width: 38px; height: 42px; }
   .auto-button span { display: none; }
   .slider-group { order: 3; width: 100%; margin: 9px 0 0; padding: 11px 5px 0; border: 0; border-top: 1px solid #ffffff0e; }
-  .range-control { width: 50%; }
-  .range-control + .range-control { margin-left: 25px; }
+  .range-control { width: 100%; }
   .range-label { font-size: 11px; }
   .range-label output { font-size: 10px; }
 }
