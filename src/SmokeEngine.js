@@ -86,7 +86,6 @@ export default class SmokeEngine {
     this.ctx = canvas.getContext('2d');
     this.cursor = cursor; this.onActivity = onActivity;
     this.palette = 'red'; this.size = 60; this.auto = false;
-    this.cameraMode = false; this.handPoint = null;
     this.time = 0; this.lastFrame = 0; this.lastAuto = 0;
     this.disposed = false;
     this.pointers = new Map(); this.hoverPoint = null; this.splats = []; this.listeners = [];
@@ -108,7 +107,6 @@ export default class SmokeEngine {
       this.resizeObserver.observe(canvas);
     }
     this.listen(canvas, 'keydown', (event) => {
-      if (this.cameraMode) return;
       if (event.code === 'Space' || event.code === 'Enter') {
         event.preventDefault();
         this.emit(random(this.width * 0.2, this.width * 0.8), random(this.height * 0.28, this.height * 0.65), true);
@@ -130,7 +128,6 @@ export default class SmokeEngine {
   bindInput() {
     const canvas = this.canvas;
     const leave = () => {
-      if (this.cameraMode) return;
       this.hoverPoint = null;
       this.cursor.classList.remove('is-visible');
       if (!this.pointers.size) this.onActivity(false);
@@ -200,7 +197,6 @@ export default class SmokeEngine {
     this.cursor.classList.add('is-visible');
   }
   pointerEnter(event) {
-    if (this.cameraMode) return;
     this.moveCursor(event);
     if (event.pointerType !== 'mouse' || this.pointers.has(event.pointerId)) return;
     const point = this.point(event);
@@ -209,7 +205,6 @@ export default class SmokeEngine {
     this.emit(point.x, point.y);
   }
   pointerDown(event) {
-    if (this.cameraMode) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault();
     const point = this.point(event);
@@ -223,7 +218,6 @@ export default class SmokeEngine {
     this.emit(point.x, point.y, true);
   }
   pointerMove(event) {
-    if (this.cameraMode) return;
     this.moveCursor(event);
     const pressed = this.pointers.has(event.pointerId);
     const hovering = event.pointerType === 'mouse' && !pressed;
@@ -244,7 +238,6 @@ export default class SmokeEngine {
     else this.hoverPoint = next;
   }
   pointerUp(event) {
-    if (this.cameraMode) return;
     if (!this.pointers.delete(event.pointerId)) return;
     if (event.pointerType === 'mouse') {
       const point = this.point(event);
@@ -256,40 +249,8 @@ export default class SmokeEngine {
     if (event.pointerType === 'touch') this.cursor.classList.remove('is-visible');
   }
   releasePointers() {
-    this.pointers.clear(); this.hoverPoint = null; this.handPoint = null;
+    this.pointers.clear(); this.hoverPoint = null;
     this.cursor.classList.remove('is-pressed', 'is-visible'); this.onActivity(false);
-  }
-  setCameraMode(enabled) {
-    this.releasePointers();
-    this.cameraMode = enabled;
-    this.cursor.classList.toggle('is-hand', enabled);
-    if (enabled) this.moveHandPointer(0.5, 0.5, false);
-  }
-  moveHandPointer(x, y, drawing) {
-    if (!this.cameraMode || this.disposed) return;
-    const bounds = this.canvas.getBoundingClientRect();
-    const point = { x: clamp(x, 0, 1) * bounds.width, y: clamp(y, 0, 1) * bounds.height };
-    this.moveCursor({ clientX: bounds.left + point.x, clientY: bounds.top + point.y, pointerType: 'hand' });
-    this.cursor.classList.toggle('is-pressed', drawing);
-    if (!drawing) { this.stopHandPointer(); return; }
-    const previous = this.handPoint;
-    if (previous) {
-      const dx = point.x - previous.x; const dy = point.y - previous.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance >= 2) {
-        const steps = Math.min(5, Math.ceil(distance / 18));
-        for (let index = 1; index <= steps; index++) {
-          this.emit(previous.x + dx * index / steps, previous.y + dy * index / steps, false, dx / steps, dy / steps);
-        }
-      }
-    } else this.emit(point.x, point.y);
-    this.handPoint = { ...point, held: previous?.held ?? this.time };
-    this.onActivity(true);
-  }
-  stopHandPointer() {
-    this.handPoint = null;
-    this.cursor.classList.remove('is-pressed');
-    this.onActivity(false);
   }
   color() {
     const base = { red: 0, blue: 220, yellow: 49, green: 138 }[this.palette] ?? 0;
@@ -318,10 +279,6 @@ export default class SmokeEngine {
     this.pointers.forEach((point) => {
       if (this.time - point.held > 100) { this.emit(point.x, point.y); point.held = this.time; }
     });
-    if (this.handPoint && this.time - this.handPoint.held > 100) {
-      this.emit(this.handPoint.x, this.handPoint.y);
-      this.handPoint.held = this.time;
-    }
     if (this.hoverPoint && this.time - this.hoverPoint.held > 160) {
       this.emit(this.hoverPoint.x, this.hoverPoint.y);
       this.hoverPoint.held = this.time;
